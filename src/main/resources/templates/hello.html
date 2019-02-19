@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/thymeleaf-extras-springsecurity5"
+      layout:decorate="~{fragments/layout}">
+<head>
+    <title>Hello</title>
+</head>
+<body>
+<div layout:fragment="content" th:remove="tag">
+    <div class="container">
+
+        <div class="row">
+            <h1 th:inline="text">Hello [[${#httpServletRequest.remoteUser}]]!</h1>
+        </div>
+
+
+        <div class="row">
+            <div sec:authorize="hasAuthority('USER')">Text visible to user.</div>
+        </div>
+        <div class="row">
+            <div sec:authorize="hasAnyAuthority('ADMIN', 'USER')">Text visible to admin.
+                <p>Click <a th:href="@{/client}">here</a> to see clients.</p>
+            </div>
+        </div>
+        <div class="row">
+            <div sec:authorize="isAuthenticated()">
+                Text visible only to authenticated users.
+            </div>
+        </div>
+        <div class="row">
+            Authenticated user name:
+            <div sec:authentication="name"></div>
+        </div>
+        <div class="row">
+            Authenticated user roles:
+            <div sec:authentication="authorities"></div>
+        </div>
+
+        <div class="row">
+            Authenticated user details:
+            <div sec:authentication="details"></div>
+        </div>
+
+        <div class="row">
+            Authenticated user principal:
+            <div sec:authentication="principal"></div>
+        </div>
+
+
+
+    </div>
+</div>
+</body>
+</html>
