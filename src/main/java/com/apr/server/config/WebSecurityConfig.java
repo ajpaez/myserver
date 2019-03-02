@@ -1,8 +1,10 @@
 package com.apr.server.config;
 
 import com.apr.server.security.AuthenticationSuccessHandlerImpl;
+import com.apr.server.security.Constants;
 import com.apr.server.security.LoggingAccessDeniedHandler;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -22,8 +24,9 @@ import javax.sql.DataSource;
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(prePostEnabled = true, proxyTargetClass = true)
-
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
+    @Value("${authentication.method}")
+    private String authenticationMethod;
 
     @Autowired
     private WebApplicationContext applicationContext;
@@ -50,52 +53,79 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
         http
                 .authorizeRequests()
-                    .antMatchers(
-                            "/js/**",
-                            "/css/**",
-                            "/img/**",
-                            "/h2/**",
-                            "/webjars/**").permitAll()
-                    .antMatchers("/", "/index", "/access-denied").permitAll()
-                    .anyRequest().authenticated()
-                .and()
-                    .formLogin()
-                        .loginPage("/login")
-                        .successForwardUrl("/hello")
-                        .defaultSuccessUrl("/hello")
-                        .failureUrl("/login?error=true")
-                        .permitAll()
-                        .usernameParameter("username") // make sure your form has correct params
-                        .passwordParameter("password")
-                        .successHandler(successHandler)
-                .and()
-                    .logout()
-                        .invalidateHttpSession(true)
-                        .clearAuthentication(true)
-                        .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
-                        .logoutSuccessUrl("/login?logout")
-                        .permitAll()
-                .and()
-                    .rememberMe()
-                    .tokenValiditySeconds(60 * 60)
-                .and()
-                    .exceptionHandling()
-                        .accessDeniedPage("/access_denied")
-                        .accessDeniedHandler(accessDeniedHandler);
+                .antMatchers(
+                        "/js/**",
+                        "/css/**",
+                        "/img/**",
+                        "/h2/**",
+                        "/webjars/**").permitAll()
+                .antMatchers("/", "/index", "/access-denied").permitAll()
+                .anyRequest().authenticated()
+            .and()
+                .formLogin()
+                    .loginPage("/login")
+                    .successForwardUrl("/hello")
+                    .defaultSuccessUrl("/hello")
+                    .failureUrl("/login?error=true")
+                    .permitAll()
+                    .usernameParameter("username") // make sure your form has correct params
+                    .passwordParameter("password")
+                    .successHandler(successHandler)
+            .and()
+                .logout()
+                    .invalidateHttpSession(true)
+                    .clearAuthentication(true)
+                    .logoutRequestMatcher(new AntPathRequestMatcher("/logout"))
+                    .logoutSuccessUrl("/login?logout")
+                    .permitAll()
+            .and()
+                .rememberMe()
+                .tokenValiditySeconds(60 * 60)
+            .and()
+                .exceptionHandling()
+                .accessDeniedPage("/access_denied")
+                .accessDeniedHandler(accessDeniedHandler);
 
     }
 
 
-
-
     @Override
     protected void configure(final AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(userDetailsService)
-                .passwordEncoder(passwordEncoder())
-                .and()
-                .authenticationProvider(authenticationProvider())
-                .jdbcAuthentication()
-                .dataSource(dataSource);
+        switch (authenticationMethod) {
+            case Constants
+                    .AUTHENTICATION_METHOD_DB:
+                auth.userDetailsService(userDetailsService)
+                        .passwordEncoder(passwordEncoder())
+                        .and()
+                        .authenticationProvider(authenticationProvider())
+                        .jdbcAuthentication()
+                        .dataSource(dataSource);
+                break;
+            case Constants
+                    .AUTHENTICATION_METHOD_LDAP:
+                auth
+                        .ldapAuthentication()
+                        .userDnPatterns("uid={0},ou=people")
+                        .groupSearchBase("ou=groups")
+                        .contextSource()
+                        .url("ldap://localhost:8389/dc=springframework,dc=org")
+                        .and()
+                        .passwordCompare()
+                        .passwordEncoder(passwordEncoder())
+                        .passwordAttribute("userPassword");
+                break;
+            case Constants
+                    .AUTHENTICATION_METHOD_MEMORY:
+                auth
+                        .inMemoryAuthentication()
+                        .withUser("user").password("password").roles("USER")
+                        .and()
+                        .withUser("admin").password("admin").roles("ADMIN");
+                break;
+            default:
+                break;
+        }
+
     }
 
 
@@ -107,35 +137,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         return authProvider;
     }
 
-/*
-    @Autowired
-    public void configureGlobal(AuthenticationManagerBuilder auth)
-            throws Exception {
-        auth
-                .inMemoryAuthentication()
-                .withUser("user").password(passwordEncoder().encode("user")).roles("USER")
-                .and()
-                .withUser("admin").password(passwordEncoder().encode("admin")).roles("ADMIN");
-    }
-
-         auth
-             .jdbcAuthentication()
-                 .dataSource(dataSource)
-                 .usersByUsernameQuery(
-                         "SELECT name as username, password, enable FROM users where name=?")
-                 .authoritiesByUsernameQuery(
-                         "SELECT users.name as username, roles.name as role FROM users INNER JOIN user_role ON users.id = user_role.user_id INNER JOIN roles ON user_role.role_id = roles.id WHERE users.name = ?")
-                 .passwordEncoder(passwordEncoder());
-     }
-
-
-    */
-
     @Bean
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-
 
 
 }
