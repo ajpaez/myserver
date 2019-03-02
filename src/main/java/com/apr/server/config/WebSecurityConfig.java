@@ -112,7 +112,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         .url("ldap://localhost:8389/dc=springframework,dc=org")
                         .and()
                         .passwordCompare()
-                        .passwordEncoder(passwordEncoder())
+                        .passwordEncoder(passwordEncoder())//remove for user with pass in plain text
                         .passwordAttribute("userPassword");
                 break;
             case Constants
