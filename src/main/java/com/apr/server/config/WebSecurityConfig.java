@@ -3,24 +3,32 @@ package com.apr.server.config;
 import com.apr.server.security.AuthenticationSuccessHandlerImpl;
 import com.apr.server.security.Constants;
 import com.apr.server.security.LoggingAccessDeniedHandler;
+import com.apr.server.security.ldap.CustomLdapUserDetails;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.ldap.core.DirContextOperations;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.ldap.userdetails.LdapUserDetails;
+import org.springframework.security.ldap.userdetails.LdapUserDetailsMapper;
+import org.springframework.security.ldap.userdetails.UserDetailsContextMapper;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 import org.springframework.web.context.WebApplicationContext;
 
 import javax.annotation.PostConstruct;
 import javax.sql.DataSource;
+import java.util.Collection;
 
 @Configuration
 @EnableWebSecurity
@@ -111,8 +119,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         .contextSource()
                         .url("ldap://localhost:8389/dc=springframework,dc=org")
                         .and()
+                        .userDetailsContextMapper(userDetailsContextMapper())
                         .passwordCompare()
-                        .passwordEncoder(passwordEncoder())//remove for user with pass in plain text
+                        .passwordEncoder(passwordEncoder())//remove for user with plain text pass
                         .passwordAttribute("userPassword");
                 break;
             case Constants
@@ -127,6 +136,17 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 break;
         }
 
+    }
+
+    @Bean
+    public UserDetailsContextMapper userDetailsContextMapper() {
+        return new LdapUserDetailsMapper() {
+            @Override
+            public UserDetails mapUserFromContext(DirContextOperations ctx, String username, Collection<? extends GrantedAuthority> authorities) {
+                UserDetails details = super.mapUserFromContext(ctx, username, authorities);
+                return new CustomLdapUserDetails((LdapUserDetails) details);
+            }
+        };
     }
 
 
