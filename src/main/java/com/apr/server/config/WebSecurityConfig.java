@@ -112,6 +112,9 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 break;
             case Constants
                     .AUTHENTICATION_METHOD_LDAP:
+                //https://docs.spring.io/spring-security/site/docs/3.0.x/reference/ldap.html
+                //https://docs.spring.io/spring-security/site/docs/current/reference/htmlsingle/#ldap
+                //https://docs.spring.io/spring-security/site/docs/5.0.2.BUILD-SNAPSHOT/api/org/springframework/security/config/annotation/authentication/configurers/ldap/LdapAuthenticationProviderConfigurer.html#groupSearchBase-java.lang.String-
                 auth
                         .ldapAuthentication()
                         .userDnPatterns("uid={0},ou=people")
